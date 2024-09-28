@@ -7,6 +7,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using System.Collections;
 using System.Collections.Generic;
+using UnityEngine.AddressableAssets;
 
 namespace BlitzyUI
 {
@@ -48,7 +49,6 @@ namespace BlitzyUI
 
         public static UIManager Instance { get; private set; }
 
-        public string resourcePrefabDirectory;
         public Canvas rootCanvas;
         public Camera uiCamera;
 
@@ -334,8 +334,7 @@ namespace BlitzyUI
                 else
                 {
                     // Instantiate new instance of screen.
-                    string path = System.IO.Path.Combine(resourcePrefabDirectory, queuedPush.prefabName);
-                    Screen prefab = Resources.Load<Screen>(path);
+                    Screen prefab = Addressables.LoadAssetAsync<GameObject>(queuedPush.prefabName).WaitForCompletion().GetComponent<Screen>();
 
                     screenInstance = Object.Instantiate(prefab, rootCanvas.transform);
                     screenInstance.Setup(queuedPush.id, queuedPush.prefabName);
