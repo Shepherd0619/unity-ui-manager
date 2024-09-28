@@ -8,6 +8,7 @@ using UnityEngine.UI;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine.AddressableAssets;
+using UnityEngine.ResourceManagement.ResourceLocations;
 
 namespace BlitzyUI
 {
@@ -44,8 +45,8 @@ namespace BlitzyUI
             }
         }
 
-        public delegate void PushedDelegate (Screen screen);
-        public delegate void PoppedDelegate (Screen.Id id);
+        public delegate void PushedDelegate(Screen screen);
+        public delegate void PoppedDelegate(Screen.Id id);
 
         public static UIManager Instance { get; private set; }
 
@@ -68,6 +69,10 @@ namespace BlitzyUI
         private PushedDelegate _activePushCallback;
         private PoppedDelegate _activePopCallback;
 
+        public string[] uiLabels = new string[1] { "UI" };
+        private IList<IResourceLocation> resourceLocations;
+
+
         public Vector2 ReferenceResolution { get { return _rootCanvasScalar.referenceResolution; } }
 
         private enum State
@@ -77,18 +82,21 @@ namespace BlitzyUI
             Pop
         }
 
-        private void Awake() {
-            if (Instance == null) {
+        private void Awake()
+        {
+            if (Instance == null)
+            {
                 Instance = this;
             }
 
             Debug.Log("[UIManager] Version: " + Version);
 
             _rootCanvasScalar = rootCanvas.GetComponent<CanvasScaler>();
-            if (_rootCanvasScalar == null) {
+            if (_rootCanvasScalar == null)
+            {
                 throw new System.Exception(string.Format("{0} must have a CanvasScalar component attached to it for UIManager.", rootCanvas.name));
             }
-                                          
+
             _cache = new Dictionary<string, Screen>();
             _queue = new Queue<QueuedScreen>();
             _stack = new List<Screen>();
@@ -99,10 +107,18 @@ namespace BlitzyUI
             {
                 Object.Destroy(child.gameObject);
             }
+
+            resourceLocations = Addressables.LoadResourceLocationsAsync(uiLabels,
+                Addressables.MergeMode.Union, typeof(GameObject))
+                .WaitForCompletion();
+
+            Debug.Log($"[{GetType()}] resourceLocations: {resourceLocations.Count}");
         }
 
-        private void OnDestroy() {
-            if (Instance == this) {
+        private void OnDestroy()
+        {
+            if (Instance == this)
+            {
                 Instance = null;
             }
         }
@@ -111,12 +127,12 @@ namespace BlitzyUI
         /// Queue the screen to be pushed onto the screen stack. 
         /// Callback will be invoked when the screen is pushed to the stack.
         /// </summary>
-        public void QueuePush (BlitzyUI.Screen.Id id, BlitzyUI.Screen.Data data, string prefabName = null, PushedDelegate callback = null)
+        public void QueuePush(BlitzyUI.Screen.Id id, BlitzyUI.Screen.Data data, string prefabName = null, PushedDelegate callback = null)
         {
             string prefab = prefabName ?? id.defaultPrefabName;
-            #if PRINT_QUEUE
+#if PRINT_QUEUE
             DebugPrintQueue(string.Format("[UIManager] QueuePush id: {0}, prefabName: {1}", id, prefab));
-            #endif
+#endif
 
             if (GetScreen(id) != null)
             {
@@ -138,9 +154,9 @@ namespace BlitzyUI
 
             _queue.Enqueue(push);
 
-            #if PRINT_QUEUE
+#if PRINT_QUEUE
             DebugPrintQueue(string.Format("[UIManager] Enqueued Screen: {0}, Frame: {1}", push, Time.frameCount));
-            #endif
+#endif
 
             if (CanExecuteNextQueueItem())
                 ExecuteNextQueueItem();
@@ -150,11 +166,11 @@ namespace BlitzyUI
         /// Queue the screen to be popped from the screen stack. This will pop all screens on top of it as well.
         /// Callback will be invoked when the screen is reached, or popped if 'include' is true.
         /// </summary>
-        public void QueuePopTo (BlitzyUI.Screen.Id id, bool include, PoppedDelegate callback = null)
+        public void QueuePopTo(BlitzyUI.Screen.Id id, bool include, PoppedDelegate callback = null)
         {
-            #if PRINT_QUEUE
+#if PRINT_QUEUE
             DebugPrintQueue(string.Format("[UIManager] QueuePopTo id: {0}, include: {1}", id, include));
-            #endif
+#endif
 
             bool found = false;
 
@@ -169,9 +185,9 @@ namespace BlitzyUI
 
                     _queue.Enqueue(queuedPop);
 
-                    #if PRINT_QUEUE
+#if PRINT_QUEUE
                     DebugPrintQueue(string.Format("[UIManager] Enqueued Screen: {0}", queuedPop));
-                    #endif
+#endif
                 }
                 else
                 {
@@ -183,9 +199,9 @@ namespace BlitzyUI
 
                         _queue.Enqueue(queuedPop);
 
-                        #if PRINT_QUEUE
+#if PRINT_QUEUE
                         DebugPrintQueue(string.Format("[UIManager] Enqueued Screen: {0}", queuedPop));
-                        #endif
+#endif
                     }
 
                     if (callback != null)
@@ -207,11 +223,11 @@ namespace BlitzyUI
         /// Queue the top-most screen to be popped from the screen stack.
         /// Callback will be invoked when the screen is popped from the stack.
         /// </summary>
-        public void QueuePop (PoppedDelegate callback = null)
+        public void QueuePop(PoppedDelegate callback = null)
         {
-            #if PRINT_QUEUE
+#if PRINT_QUEUE
             DebugPrintQueue(string.Format("[UIManager] QueuePop"));
-            #endif
+#endif
 
             Screen topScreen = GetTopScreen();
             if (topScreen == null)
@@ -223,21 +239,21 @@ namespace BlitzyUI
 
             _queue.Enqueue(pop);
 
-            #if PRINT_QUEUE
+#if PRINT_QUEUE
             DebugPrintQueue(string.Format("[UIManager] Enqueued Screen: {0}", pop));
-            #endif
+#endif
 
             if (CanExecuteNextQueueItem())
                 ExecuteNextQueueItem();
         }
 
-        public void OnUpdate ()
+        public void OnUpdate()
         {
             if (CanExecuteNextQueueItem())
                 ExecuteNextQueueItem();
         }
 
-        public Screen GetTopScreen ()
+        public Screen GetTopScreen()
         {
             if (_stack.Count > 0)
                 return _stack[0];
@@ -245,7 +261,7 @@ namespace BlitzyUI
             return null;
         }
 
-        public Screen GetScreen (BlitzyUI.Screen.Id id)
+        public Screen GetScreen(BlitzyUI.Screen.Id id)
         {
             int count = _stack.Count;
             for (int i = 0; i < count; i++)
@@ -257,16 +273,17 @@ namespace BlitzyUI
             return null;
         }
 
-        public T GetScreen<T> (BlitzyUI.Screen.Id id) where T : BlitzyUI.Screen
+        public T GetScreen<T>(BlitzyUI.Screen.Id id) where T : BlitzyUI.Screen
         {
             Screen screen = GetScreen(id);
             return (T)screen;
         }
 
-        public void SetVisibility (bool visible)
+        public void SetVisibility(bool visible)
         {
             var canvasGroup = rootCanvas.GetComponent<CanvasGroup>();
-            if (canvasGroup == null) {
+            if (canvasGroup == null)
+            {
                 canvasGroup = rootCanvas.gameObject.AddComponent<CanvasGroup>();
             }
 
@@ -275,21 +292,23 @@ namespace BlitzyUI
             canvasGroup.blocksRaycasts = visible;
         }
 
-        public bool IsVisible() {
+        public bool IsVisible()
+        {
             var canvasGroup = rootCanvas.GetComponent<CanvasGroup>();
 
-            if (canvasGroup == null) {
+            if (canvasGroup == null)
+            {
                 return true;
             }
 
-            bool isVisible = canvasGroup.alpha > 0.0f && 
+            bool isVisible = canvasGroup.alpha > 0.0f &&
                             canvasGroup.interactable == true &&
                             canvasGroup.blocksRaycasts == true;
 
             return isVisible;
         }
 
-        private bool CanExecuteNextQueueItem ()
+        private bool CanExecuteNextQueueItem()
         {
             if (_state == State.Ready)
             {
@@ -302,14 +321,14 @@ namespace BlitzyUI
             return false;
         }
 
-        private void ExecuteNextQueueItem ()
+        private void ExecuteNextQueueItem()
         {
             // Get next queued item.
             QueuedScreen queued = _queue.Dequeue();
 
-            #if PRINT_QUEUE
+#if PRINT_QUEUE
             DebugPrintQueue(string.Format("[UIManager] Dequeued Screen: {0}, Frame: {1}", queued, Time.frameCount));
-            #endif
+#endif
 
             if (queued is QueuedScreenPush)
             {
@@ -322,9 +341,9 @@ namespace BlitzyUI
                     // Use cached instance of screen.
                     _cache.Remove(queuedPush.prefabName);
 
-                    #if PRINT_CACHE
+#if PRINT_CACHE
                     DebugPrintCache(string.Format("[UIManager] Screen retrieved from Cache: {0}", queuedPush.prefabName));
-                    #endif
+#endif
 
                     // Move cached to the front of the transfrom heirarchy so that it is sorted properly.
                     screenInstance.transform.SetAsLastSibling();
@@ -333,17 +352,34 @@ namespace BlitzyUI
                 }
                 else
                 {
+                    IResourceLocation resourceLocation = null;
                     // Instantiate new instance of screen.
-                    Screen prefab = Addressables.LoadAssetAsync<GameObject>(queuedPush.prefabName).WaitForCompletion().GetComponent<Screen>();
-                    
-                    if(!prefab)
+                    for (int i = 0; i < resourceLocations.Count; i++)
+                    {
+                        if (resourceLocations[i].PrimaryKey != queuedPush.prefabName)
+                        {
+                            continue;
+                        }
+
+                        resourceLocation = resourceLocations[i];
+                    }
+
+                    if (resourceLocation == null || resourceLocation == default)
+                    {
+                        throw new System.Exception(string.Format("{0} not found in Addressables.", queuedPush.prefabName));
+                    }
+
+                    Screen prefab = Addressables.LoadAssetAsync<GameObject>(resourceLocation).WaitForCompletion().GetComponent<Screen>();
+
+                    if (!prefab)
                         throw new System.Exception(string.Format("{0} must have a Screen component attached to it for UIManager.", queuedPush.prefabName));
 
                     screenInstance = Object.Instantiate(prefab, rootCanvas.transform);
                     screenInstance.Setup(queuedPush.id, queuedPush.prefabName);
                 }
 
-                if (this.inputOrderFixEnabled) {
+                if (this.inputOrderFixEnabled)
+                {
                     this.UpdateSortOrderOverrides();
                 }
 
@@ -351,9 +387,9 @@ namespace BlitzyUI
                 var topScreen = GetTopScreen();
                 if (topScreen != null)
                 {
-                    #if PRINT_FOCUS
+#if PRINT_FOCUS
                     Debug.Log(string.Format("[UIManager] Lost Focus: {0}", topScreen.id));
-                    #endif
+#endif
 
                     topScreen.OnFocusLost();
                 }
@@ -364,18 +400,18 @@ namespace BlitzyUI
 
                 _activePushCallback = queuedPush.callback;
 
-                #if PRINT_STACK
+#if PRINT_STACK
                 DebugPrintStack(string.Format("[UIManager] Pushing Screen: {0}, Frame: {1}", queued.id, Time.frameCount));
-                #endif
+#endif
 
                 screenInstance.onPushFinished += HandlePushFinished;
                 screenInstance.OnPush(queuedPush.data);
 
                 if (_queue.Count == 0)
                 {
-                    #if PRINT_FOCUS
+#if PRINT_FOCUS
                     Debug.Log(string.Format("[UIManager] Gained Focus: {0}", screenInstance.id));
-                    #endif
+#endif
 
                     // Screen gains focus when it is on top of the screen stack and no other items in the queue.
                     screenInstance.OnFocus();
@@ -393,9 +429,9 @@ namespace BlitzyUI
                                                              "TopScreen: {0}, QueuedPop: {1}", screenToPop.id, queued.id));
                 }
 
-                #if PRINT_FOCUS
+#if PRINT_FOCUS
                 Debug.Log(string.Format("[UIManager] Lost Focus: {0}", screenToPop.id));
-                #endif
+#endif
 
                 screenToPop.OnFocusLost();
 
@@ -408,9 +444,9 @@ namespace BlitzyUI
                 {
                     if (_queue.Count == 0)
                     {
-                        #if PRINT_FOCUS
+#if PRINT_FOCUS
                         Debug.Log(string.Format("[UIManager] Gained Focus: {0}", newTopScreen.id));
-                        #endif
+#endif
 
                         // Screen gains focus when it is on top of the screen stack and no other items in the queue.
                         newTopScreen.OnFocus();
@@ -419,29 +455,36 @@ namespace BlitzyUI
 
                 _activePopCallback = queuedPop.callback;
 
-                #if PRINT_STACK
+#if PRINT_STACK
                 DebugPrintStack(string.Format("[UIManager] Popping Screen: {0}, Frame: {1}", queued.id, Time.frameCount));
-                #endif
+#endif
 
                 screenToPop.onPopFinished += HandlePopFinished;
                 screenToPop.OnPop();
             }
         }
 
-        private void UpdateSortOrderOverrides() {
+        private void UpdateSortOrderOverrides()
+        {
             int managedOrder = 0;
-            
+
             int childCount = this.rootCanvas.transform.childCount;
-            for (int i = 0; i < childCount; i++) {
+            for (int i = 0; i < childCount; i++)
+            {
                 var screen = this.rootCanvas.transform.GetChild(i).GetComponent<Screen>();
-                if (screen != null) {
+                if (screen != null)
+                {
                     var canvas = screen.GetComponent<Canvas>();
-                    if (canvas != null) {
+                    if (canvas != null)
+                    {
                         canvas.overrideSorting = true;
 
-                        if (screen.overrideManagedSorting) {
+                        if (screen.overrideManagedSorting)
+                        {
                             canvas.sortingOrder = screen.overrideSortValue;
-                        } else {
+                        }
+                        else
+                        {
                             canvas.sortingOrder = managedOrder;
                             managedOrder++;
                         }
@@ -460,7 +503,7 @@ namespace BlitzyUI
         //    // TODO: Infer if the screen will exists after the queue is fully executed.
         //}
 
-        private void DebugPrintStack (string optionalEventMsg)
+        private void DebugPrintStack(string optionalEventMsg)
         {
             var sb = new System.Text.StringBuilder();
 
@@ -477,7 +520,7 @@ namespace BlitzyUI
             Debug.Log(sb.ToString());
         }
 
-        private void DebugPrintQueue (string optionalEventMsg)
+        private void DebugPrintQueue(string optionalEventMsg)
         {
             var sb = new System.Text.StringBuilder();
 
@@ -494,7 +537,7 @@ namespace BlitzyUI
             Debug.Log(sb.ToString());
         }
 
-        private void DebugPrintCache (string optionalEventMsg)
+        private void DebugPrintCache(string optionalEventMsg)
         {
             var sb = new System.Text.StringBuilder();
 
@@ -511,7 +554,7 @@ namespace BlitzyUI
             Debug.Log(sb.ToString());
         }
 
-        private void HandlePushFinished (Screen screen)
+        private void HandlePushFinished(Screen screen)
         {
             screen.onPushFinished -= HandlePushFinished;
 
@@ -527,7 +570,7 @@ namespace BlitzyUI
                 ExecuteNextQueueItem();
         }
 
-        private void HandlePopFinished (Screen screen)
+        private void HandlePopFinished(Screen screen)
         {
             screen.onPopFinished -= HandlePopFinished;
 
@@ -541,9 +584,9 @@ namespace BlitzyUI
                 {
                     _cache.Add(screen.PrefabName, screen);
 
-                    #if PRINT_CACHE
+#if PRINT_CACHE
                     DebugPrintCache(string.Format("[UIManager] Screen added to Cache: {0}", screen.PrefabName));
-                    #endif
+#endif
                 }
             }
             else
