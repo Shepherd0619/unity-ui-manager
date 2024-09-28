@@ -22,18 +22,21 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - default
+    - UI
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 9c435cd248576467c8598a6659f4b488
     m_Address: ExampleMenuScreen
     m_ReadOnly: 0
     m_SerializedLabels:
     - default
+    - UI
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 2a6f840d0a5964ef38728af675305743
     m_Address: ExamplePopupScreen
     m_ReadOnly: 0
     m_SerializedLabels:
     - default
+    - UI
     FlaggedDuringContentUpdateRestriction: 0
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: 552cbf109eaee184aa113148f54047c9, type: 2}
