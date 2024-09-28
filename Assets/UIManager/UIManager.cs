@@ -335,6 +335,9 @@ namespace BlitzyUI
                 {
                     // Instantiate new instance of screen.
                     Screen prefab = Addressables.LoadAssetAsync<GameObject>(queuedPush.prefabName).WaitForCompletion().GetComponent<Screen>();
+                    
+                    if(!prefab)
+                        throw new System.Exception(string.Format("{0} must have a Screen component attached to it for UIManager.", queuedPush.prefabName));
 
                     screenInstance = Object.Instantiate(prefab, rootCanvas.transform);
                     screenInstance.Setup(queuedPush.id, queuedPush.prefabName);
